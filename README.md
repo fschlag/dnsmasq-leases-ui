@@ -1,6 +1,6 @@
 # dnsmasq-leases-ui
 
-This tool provides a web based ui for the famous DNS/DHCP daemon [dnsmasq](http://thekelleys.org.uk/dnsmasq/doc.html).
+This tool provides a web based ui for leases file of the famous DNS/DHCP daemon [dnsmasq](http://thekelleys.org.uk/dnsmasq/doc.html).
 
 # Example
 
