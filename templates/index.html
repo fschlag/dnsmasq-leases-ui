@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>dnsmasq-web</title>
+	</head>
+	<style>
+		body {
+			font-family: monospace;
+		}
+
+		#leases {
+			text-align: left;
+		}
+
+		th, td {
+			padding-bottom: 5px;
+			padding-right: 30px;
+		}
+
+		tr:hover {
+			background: #ccc;
+		}
+	</style>
+	<body>
+
+	<table id="leases">
+		<tr>
+			<th>IP Address</th><th>Mac Address</th><th>Name</th><th>Static IP?</th><th>Lease ends on</th>
+		</tr>
+	</table>
+	
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
+	<script>
+	  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+	</script>
+	<script>
+		$(function() {
+			$.getJSON($SCRIPT_ROOT + '/leases',
+			function(data) {
+				$('#leases').append(
+					$.map(data.leases, function(ignore, index) {
+						return '<tr>' +
+							'<td>' + data.leases[index].ipAddress + '</td>' +
+							'<td>' + data.leases[index].macAddress + '</td>' +
+							'<td>' + data.leases[index].name + '</td>' +
+							'<td>' + ( (data.leases[index].staticIP) ? 'Yes' : 'No' ) + '</td>' +
+							'<td>' + ( (data.leases[index].staticIP) ? 'Never' : data.leases[index].leasetime ) + '</td>' +
+							'</tr>';
+						}).join());
+			});
+
+			return false;
+		});
+	</script>
+	</body>
+</html>
