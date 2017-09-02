@@ -19,6 +19,6 @@ will produce
 
 # How to use
 
-After cloning the repository run `python dnsmasq-leases-ui.py`.
+After cloning the repository run `python dnsmasq-leases-ui.py`
 
-The web interface will be available under `http://<hostname or ip>:5000`.
+The web interface will be available under `http://<hostname or ip>:5000`
