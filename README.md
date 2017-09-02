@@ -13,6 +13,8 @@ An `/var/lib/misc/dnsmasq.leases` file with the following content
 ```
 
 will produce
+
+
 ![Screenshot 1](https://raw.githubusercontent.com/fschlag/docs/master/dnsmasq-leases-ui-docs/screenshot_1.png)
 
 # How to use
