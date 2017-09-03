@@ -4,7 +4,7 @@ This tool provides a web based ui for leases file of the famous DNS/DHCP daemon 
 
 # Example
 
-An `/var/lib/misc/dnsmasq.leases` file with the following content
+A `/var/lib/misc/dnsmasq.leases` file with the following content
 
 ```
 1504409608 11:11:11:11:11:11 192.168.0.10 Client1 01:11:11:11:11:11:11
