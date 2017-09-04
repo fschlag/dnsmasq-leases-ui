@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# This tool provides a web based ui for leases file of the famous DNS/DHCP daemon dnsmasq.
+#
+# 
+# See https://github.com/fschlag/dnsmasq-leases-ui
+# by Florian Schlag (https://github.com/fschlag)
+#
 from flask import Flask, render_template, jsonify
 import datetime
 
