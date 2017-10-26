@@ -30,7 +30,7 @@ docker run \
         -p 5000:5000 \
         -v /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.leases:ro  \
         --name dnsmasq-leases-ui \
-        fschlag/dnsmasq-leases-ui:latest \
+        fschlag/dnsmasq-leases-ui:latest
 ```
 
 For both variants the web interface will be available under `http://<hostname or ip>:5000`
