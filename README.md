@@ -17,7 +17,7 @@ will produce
 
 ![Screenshot 1](https://raw.githubusercontent.com/fschlag/docs/master/dnsmasq-leases-ui-docs/screenshot_1.png)
 
-# How to use
+# How to run
 
 ## Standalone
 
@@ -33,7 +33,11 @@ docker run \
         fschlag/dnsmasq-leases-ui:latest
 ```
 
-For both variants the web interface will be available under `http://<hostname or ip>:5000`
+# How to use
+
+For both variants there are two options to access it:
+* Human readable HTML: `http://<hostname or ip>:5000`
+* JSON Representation: `http://<hostname or ip>:5000/leases` 
 
 # Credits
 
