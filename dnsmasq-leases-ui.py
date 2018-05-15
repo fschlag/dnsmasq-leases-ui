@@ -51,11 +51,13 @@ def getLeases():
 	with open(DNSMASQ_LEASES_FILE) as f:
 		for line in f:
 			elements = line.split()
-			entry = LeaseEntry(elements[0],
-					   elements[1],
-					   elements[2],
-					   elements[3])
-			leases.append(entry)
+			if len(elements) == 5:
+				entry = LeaseEntry(elements[0],
+						   elements[1],
+						   elements[2],
+						   elements[3])
+				leases.append(entry)
+
 	leases.sort(key = leaseSort)
 	return jsonify(leases=[lease.serialize() for lease in leases])
 
