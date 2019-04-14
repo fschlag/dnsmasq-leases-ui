@@ -139,6 +139,7 @@ ENV/
 [Mm]an
 [Ss]cripts
 [Tt]cl
+[Ss]hare
 pyvenv.cfg
 pip-selfcheck.json
 

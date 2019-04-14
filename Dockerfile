@@ -1,4 +1,4 @@
-FROM python:3.6.1-alpine
+FROM python:3.6.8-alpine
 
 RUN echo '* Installing OS dependencies' \
   && apk add --update --no-cache build-base
