@@ -37,9 +37,9 @@ class LeaseEntry:
 def leaseSort(arg):
 	# Fixed IPs first
 	if arg.staticIP == True:
-		return 0
+		return '0' + arg.ipAddress
 	else:
-		return arg.name.lower()
+		return arg.ipAddress
 
 @app.route("/")
 def index():
