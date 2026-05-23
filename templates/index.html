@@ -3,34 +3,149 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<meta name="color-scheme" content="light dark">
 	<title>dnsmasq-web</title>
+	<script>
+		(() => {
+			try {
+				const t = localStorage.getItem('dnsmasq-leases-theme');
+				if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+			} catch {}
+		})();
+	</script>
 	<style>
-		body { font-family: monospace; }
-		th, td { text-align: left; padding-bottom: 5px; padding-right: 30px; }
-		tr:hover { background: #ccc; }
-		th { cursor: pointer; user-select: none; }
+		:root {
+			--bg: #ffffff;
+			--fg: #111111;
+			--row-hover: #e6e6e6;
+			--muted: #666666;
+			--border: #cccccc;
+			--accent: #0066cc;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root:not([data-theme="light"]) {
+				--bg: #1a1a1a;
+				--fg: #e6e6e6;
+				--row-hover: #2a2a2a;
+				--muted: #999999;
+				--border: #444444;
+				--accent: #4d9fff;
+			}
+		}
+		:root[data-theme="dark"] {
+			--bg: #1a1a1a;
+			--fg: #e6e6e6;
+			--row-hover: #2a2a2a;
+			--muted: #999999;
+			--border: #444444;
+			--accent: #4d9fff;
+		}
+		#theme-toggle {
+			position: fixed;
+			top: 0.75rem;
+			right: 0.75rem;
+			background: var(--bg);
+			color: var(--fg);
+			border: 1px solid var(--fg);
+			border-radius: 50%;
+			width: 2.25rem;
+			height: 2.25rem;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			padding: 0;
+		}
+		#theme-toggle:hover { background: var(--row-hover); }
+		#theme-toggle:focus-visible {
+			outline: 2px solid var(--accent);
+			outline-offset: 2px;
+		}
+		#theme-toggle svg { width: 1.25rem; height: 1.25rem; stroke-width: 2.25; }
+		#theme-toggle .icon-moon { fill: var(--fg); stroke: var(--fg); }
+		#theme-toggle .icon-sun { stroke: var(--fg); }
+		#theme-toggle .icon-sun { display: none; }
+		#theme-toggle .icon-moon { display: inline; }
+		:root[data-theme="dark"] #theme-toggle .icon-moon { display: none; }
+		:root[data-theme="dark"] #theme-toggle .icon-sun { display: inline; }
+		@media (prefers-color-scheme: dark) {
+			:root:not([data-theme="light"]) #theme-toggle .icon-moon { display: none; }
+			:root:not([data-theme="light"]) #theme-toggle .icon-sun { display: inline; }
+		}
+		body {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			background: var(--bg);
+			color: var(--fg);
+			margin: 1rem;
+		}
+		table { border-collapse: collapse; }
+		th, td { text-align: left; padding: 0.4rem 1.5rem 0.4rem 0; }
+		tbody tr:hover { background: var(--row-hover); }
+		th {
+			cursor: pointer;
+			user-select: none;
+			border-bottom: 1px solid var(--border);
+		}
 		th:hover { text-decoration: underline; }
+		th:focus-visible {
+			outline: 2px solid var(--accent);
+			outline-offset: 2px;
+		}
 		th.sorted { font-weight: bold; }
-		.sort-indicator { display: inline-block; width: 1em; color: #888; }
+		.sort-indicator {
+			display: inline-block;
+			width: 1em;
+			color: var(--muted);
+		}
+		#status {
+			margin-top: 0.5rem;
+			color: var(--muted);
+			min-height: 1.2em;
+		}
+		#status.error { color: #cc3333; }
 	</style>
 </head>
 <body>
+<button id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+	<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+	</svg>
+	<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<circle cx="12" cy="12" r="4"/>
+		<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+	</svg>
+</button>
 <table id="leases">
 	<thead>
 		<tr>
-			<th data-key="ipAddress">IP Address<span class="sort-indicator"></span></th>
-			<th data-key="macAddress">Mac Address<span class="sort-indicator"></span></th>
-			<th data-key="name">Name<span class="sort-indicator"></span></th>
-			<th data-key="staticIP">Static IP<span class="sort-indicator"></span></th>
-			<th data-key="leasetime">Lease ends on<span class="sort-indicator"></span></th>
+			<th tabindex="0" data-key="ipAddress" aria-sort="ascending">IP Address<span class="sort-indicator"></span></th>
+			<th tabindex="0" data-key="macAddress" aria-sort="none">Mac Address<span class="sort-indicator"></span></th>
+			<th tabindex="0" data-key="name" aria-sort="none">Name<span class="sort-indicator"></span></th>
+			<th tabindex="0" data-key="staticIP" aria-sort="none">Static IP<span class="sort-indicator"></span></th>
+			<th tabindex="0" data-key="leasetime" aria-sort="none">Lease ends on<span class="sort-indicator"></span></th>
 		</tr>
 	</thead>
 	<tbody></tbody>
 </table>
-<script>
-(() => {
+<div id="status" role="status" aria-live="polite">Loading…</div>
+<!-- Theme-toggle SVGs derived from Feather Icons (MIT). See NOTICE. -->
+<script type="module">
+	const SCRIPT_ROOT = {{ request.script_root|tojson }};
+	const THEME_KEY = 'dnsmasq-leases-theme';
+
+	const themeBtn = document.querySelector('#theme-toggle');
+	themeBtn.addEventListener('click', () => {
+		const current = document.documentElement.getAttribute('data-theme');
+		const effective = current ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+		const next = effective === 'dark' ? 'light' : 'dark';
+		document.documentElement.setAttribute('data-theme', next);
+		try { localStorage.setItem(THEME_KEY, next); } catch {}
+	});
+
 	const STORAGE_KEY = 'dnsmasq-leases-sort';
 	const DEFAULT_SORT = { column: 'ipAddress', dir: 'asc' };
+	const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 	let leases = [];
 	let currentSort = loadSort();
 
@@ -39,42 +154,43 @@
 			const raw = localStorage.getItem(STORAGE_KEY);
 			if (raw) {
 				const parsed = JSON.parse(raw);
-				if (parsed && parsed.column && parsed.dir) return parsed;
+				if (parsed?.column && parsed?.dir) return parsed;
 			}
-		} catch (e) {}
+		} catch {}
 		return { ...DEFAULT_SORT };
 	}
 
 	function saveSort(sort) {
-		try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sort)); } catch (e) {}
+		try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sort)); } catch {}
 	}
 
 	function ipToTuple(ip) {
-		if (typeof ip !== 'string') return [0,0,0,0];
+		if (typeof ip !== 'string') return [0, 0, 0, 0];
 		if (ip.includes('.') && !ip.includes(':')) {
 			return ip.split('.').map(p => parseInt(p, 10) || 0);
 		}
-		return [ip];
+		return null;
 	}
 
 	function cmp(a, b, column) {
-		const va = a[column], vb = b[column];
+		const va = a[column];
+		const vb = b[column];
 		if (column === 'ipAddress') {
-			const ta = ipToTuple(va), tb = ipToTuple(vb);
-			for (let i = 0; i < Math.max(ta.length, tb.length); i++) {
-				const ea = ta[i] || 0, eb = tb[i] || 0;
-				if (ea < eb) return -1;
-				if (ea > eb) return 1;
+			const ta = ipToTuple(va);
+			const tb = ipToTuple(vb);
+			if (ta && tb) {
+				for (let i = 0; i < 4; i++) {
+					if (ta[i] !== tb[i]) return ta[i] - tb[i];
+				}
+				return 0;
 			}
-			return 0;
+			return collator.compare(String(va), String(vb));
 		}
 		if (column === 'staticIP') {
 			if (va === vb) return cmp(a, b, 'ipAddress');
 			return va ? -1 : 1;
 		}
-		if (va < vb) return -1;
-		if (va > vb) return 1;
-		return 0;
+		return collator.compare(String(va ?? ''), String(vb ?? ''));
 	}
 
 	function render() {
@@ -102,22 +218,22 @@
 	}
 
 	function updateIndicators() {
-		document.querySelectorAll('#leases th').forEach(th => {
+		for (const th of document.querySelectorAll('#leases th')) {
 			const key = th.dataset.key;
 			const ind = th.querySelector('.sort-indicator');
 			if (key === currentSort.column) {
 				th.classList.add('sorted');
+				th.setAttribute('aria-sort', currentSort.dir === 'asc' ? 'ascending' : 'descending');
 				ind.textContent = currentSort.dir === 'asc' ? ' ▲' : ' ▼';
 			} else {
 				th.classList.remove('sorted');
+				th.setAttribute('aria-sort', 'none');
 				ind.textContent = '';
 			}
-		});
+		}
 	}
 
-	document.querySelector('#leases thead').addEventListener('click', e => {
-		const th = e.target.closest('th');
-		if (!th) return;
+	function activateHeader(th) {
 		const key = th.dataset.key;
 		if (currentSort.column === key) {
 			currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
@@ -126,15 +242,36 @@
 		}
 		saveSort(currentSort);
 		render();
+	}
+
+	const thead = document.querySelector('#leases thead');
+	thead.addEventListener('click', e => {
+		const th = e.target.closest('th');
+		if (th) activateHeader(th);
+	});
+	thead.addEventListener('keydown', e => {
+		if (e.key !== 'Enter' && e.key !== ' ') return;
+		const th = e.target.closest('th');
+		if (!th) return;
+		e.preventDefault();
+		activateHeader(th);
 	});
 
 	updateIndicators();
 
-	fetch('leases')
-		.then(r => r.json())
-		.then(data => { leases = data.leases; render(); })
-		.catch(err => console.error('Failed to load leases', err));
-})();
+	const status = document.querySelector('#status');
+	try {
+		const r = await fetch(`${SCRIPT_ROOT}/leases`);
+		if (!r.ok) throw new Error(`HTTP ${r.status}`);
+		const data = await r.json();
+		leases = data.leases;
+		render();
+		status.textContent = `${leases.length} lease${leases.length === 1 ? '' : 's'}`;
+	} catch (err) {
+		status.textContent = `Failed to load leases: ${err.message}`;
+		status.classList.add('error');
+		console.error(err);
+	}
 </script>
 </body>
 </html>
