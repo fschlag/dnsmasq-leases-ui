@@ -19,10 +19,10 @@ docker run -p 5000:5000 -v /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.le
 
 Local Docker test with sample leases:
 ```
-./run-local.sh          # port 5000
-./run-local.sh 8080     # override host port
+./local/run-local.sh          # port 5000
+./local/run-local.sh 8080     # override host port
 ```
-Builds image, mounts `dnsmasq.leases.sample` as the leases file, runs foreground (`--rm -it`).
+Builds image, mounts `local/dnsmasq.leases.sample` as the leases file, runs foreground (`--rm -it`).
 
 No tests. Lint + format via `ruff` (config in `pyproject.toml`):
 ```
@@ -32,11 +32,11 @@ No tests. Lint + format via `ruff` (config in `pyproject.toml`):
 .venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
 ```
 
-Local testing without real dnsmasq: `dnsmasq.leases.sample` ships fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override the hardcoded path via env-edit or symlink:
+Local testing without real dnsmasq: `local/dnsmasq.leases.sample` ships fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
 ```
-sudo ln -s "$PWD/dnsmasq.leases.sample" /var/lib/misc/dnsmasq.leases
+DNSMASQ_LEASES_FILE="$PWD/local/dnsmasq.leases.sample" .venv/bin/python dnsmasq_leases_ui.py
 ```
-or patch `DNSMASQ_LEASES_FILE` for the session.
+`HOST` and `PORT` env vars also override dev-server bind (gunicorn ignores; configure via `-b` instead).
 
 ## Architecture
 
