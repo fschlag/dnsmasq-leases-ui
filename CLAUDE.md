@@ -1,15 +1,15 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+File guide Claude Code (claude.ai/code) when work code this repo.
 
 ## Commands
 
-Run locally (venv at `.venv/`, already provisioned):
+Run local (venv at `.venv/`, already provisioned):
 ```
 .venv/bin/python dnsmasq_leases_ui.py
 ```
-Recreate if missing: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
-Serves on `0.0.0.0:5000` (dev mode uses Flask dev server; container uses gunicorn). Reads `/var/lib/misc/dnsmasq.leases` (path hardcoded in `DNSMASQ_LEASES_FILE`).
+Recreate if gone: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
+Serve `0.0.0.0:5000` (dev = Flask dev server; container = gunicorn). Read `/var/lib/misc/dnsmasq.leases` (path hardcoded in `DNSMASQ_LEASES_FILE`).
 
 Docker build/run:
 ```
@@ -22,7 +22,7 @@ Local Docker test with sample leases:
 ./local/run-local.sh          # port 5000
 ./local/run-local.sh 8080     # override host port
 ```
-Builds image, mounts `local/dnsmasq.leases.sample` as the leases file, runs foreground (`--rm -it`).
+Build image, mount `local/dnsmasq.leases.sample` as leases file, run foreground (`--rm -it`).
 
 No tests. Lint + format via `ruff` (config in `pyproject.toml`):
 ```
@@ -32,19 +32,32 @@ No tests. Lint + format via `ruff` (config in `pyproject.toml`):
 .venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
 ```
 
-Local testing without real dnsmasq: `local/dnsmasq.leases.sample` ships fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
+Local test without real dnsmasq: `local/dnsmasq.leases.sample` ship fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
 ```
 DNSMASQ_LEASES_FILE="$PWD/local/dnsmasq.leases.sample" .venv/bin/python dnsmasq_leases_ui.py
 ```
-`HOST` and `PORT` env vars also override dev-server bind (gunicorn ignores; configure via `-b` instead).
+`HOST` and `PORT` env vars also override dev-server bind (gunicorn ignore; use `-b` instead).
 
 ## Architecture
 
 Single-file Flask app (`dnsmasq_leases_ui.py`) + one Jinja template (`templates/index.html`).
 
-- `/` → renders `index.html`. Client-side vanilla JS fetches `/leases`, sorts and builds the table in the browser using `textContent` (no HTML injection). Template itself contains no lease data.
-- `/leases` → parses dnsmasq leases file on each request, returns JSON. Sorting is client-side only.
+- `/` → render `index.html`. Client-side vanilla JS fetch `/leases`, sort + build table in browser via `textContent` (no HTML injection). Template hold no lease data.
+- `/leases` → parse dnsmasq leases file per request, return JSON. Sort client-side only.
 
-Lease file format expected: space-separated `leasetime mac ip name client-id` per line. Lines without exactly 5 fields are skipped — this filters out the IPv6 `duid ...` server-id line that dnsmasq writes when serving IPv6 (see commit 3639347).
+Lease file format: space-separated `leasetime mac ip name client-id` per line. Lines without exactly 5 fields skipped — filter out IPv6 `duid ...` server-id line dnsmasq write when serve IPv6 (see commit 3639347).
 
-`LeaseEntry.staticIP` is `True` when `leasetime == '0'`. Client `cmp()` puts static entries first, sorts IPv4 numerically by octet tuple.
+`LeaseEntry.staticIP` = `True` when `leasetime == '0'`. Client `cmp()` put static first, sort IPv4 numerically by octet tuple.
+
+## Commit conventions
+
+- **Conventional Commits**: `type(scope): subject`. Types used: `feat`, `fix`, `chore`, `docs`, `refactor`. Scope optional (e.g. `feat(ui): ...`).
+- **Subject**: one line, lowercase, no trailing period, ≤72 chars. Imperative ("add", "fix", not "added"/"fixes").
+- **Body**: skip unless *why* not obvious from subject + diff.
+- **No co-author / tool attribution lines** (no `Co-Authored-By: Claude …`, no `Generated with …` footers).
+- **One topic per commit** when practical. Bundling related UI tweaks (e.g. sticky header + search + footer one commit) fine; mixing unrelated refactors not.
+- Examples from repo history:
+  - `feat(ui): sticky header, search filter, footer with version; expand sample to 200 entries`
+  - `chore: modernize to Python 3.12, Flask 3, gunicorn, ruff; fix XSS in lease table`
+  - `feat: improve sorting`
+- Never use `--no-verify`, `--amend` on pushed commits, or force-push to `main`.
