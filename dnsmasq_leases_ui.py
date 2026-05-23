@@ -6,6 +6,10 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template
 
+__version__ = "2.0.0"
+__release_date__ = "2026-05-23"
+REPO_URL = "https://github.com/fschlag/dnsmasq-leases-ui"
+
 DNSMASQ_LEASES_FILE = os.environ.get("DNSMASQ_LEASES_FILE", "/var/lib/misc/dnsmasq.leases")
 
 app = Flask(__name__)
@@ -38,7 +42,12 @@ def read_leases() -> list[LeaseEntry]:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template(
+        "index.html",
+        version=__version__,
+        release_date=__release_date__,
+        repo_url=REPO_URL,
+    )
 
 
 @app.route("/leases")

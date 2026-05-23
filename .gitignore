@@ -136,6 +136,7 @@ ENV/
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
+!/local/
 [Mm]an
 [Ss]cripts
 [Tt]cl
