@@ -173,7 +173,7 @@
 <div id="status" role="status" aria-live="polite">Loading…</div>
 <footer id="footer">
 	<a href="{{ repo_url }}" target="_blank" rel="noopener noreferrer">dnsmasq-leases-ui</a>
-	v{{ version }} &middot; released {{ release_date }}
+	v{{ version }}{% if release_date %} &middot; released {{ release_date }}{% endif %}
 </footer>
 <!-- Theme-toggle SVGs derived from Feather Icons (MIT). See NOTICE. -->
 <script type="module">

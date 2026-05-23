@@ -7,6 +7,10 @@ LABEL org.opencontainers.image.title="dnsmasq-leases-ui" \
       org.opencontainers.image.url="https://github.com/fschlag/dnsmasq-leases-ui" \
       org.opencontainers.image.licenses="MIT"
 
+ARG APP_VERSION=dev
+ARG APP_RELEASE_DATE=
+ENV APP_VERSION=${APP_VERSION} APP_RELEASE_DATE=${APP_RELEASE_DATE}
+
 WORKDIR /app
 
 COPY requirements.txt ./

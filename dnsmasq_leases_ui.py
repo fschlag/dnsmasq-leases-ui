@@ -6,8 +6,8 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template
 
-__version__ = "2.0.0"
-__release_date__ = "2026-05-23"
+__version__ = os.environ.get("APP_VERSION", "dev")
+__release_date__ = os.environ.get("APP_RELEASE_DATE", "")
 REPO_URL = "https://github.com/fschlag/dnsmasq-leases-ui"
 
 DNSMASQ_LEASES_FILE = os.environ.get("DNSMASQ_LEASES_FILE", "/var/lib/misc/dnsmasq.leases")
