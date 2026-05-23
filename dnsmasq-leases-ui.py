@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # This tool provides a web based ui for leases file of the famous DNS/DHCP daemon dnsmasq.
 #
-# 
+#
 # See https://github.com/fschlag/dnsmasq-leases-ui
 # by Florian Schlag (https://github.com/fschlag)
 #
+
 from flask import Flask, render_template, jsonify
 import datetime
+from operator import attrgetter
 
 DNSMASQ_LEASES_FILE = "/var/lib/misc/dnsmasq.leases"
 
@@ -41,12 +43,14 @@ def leaseSort(arg):
 	else:
 		return arg.ipAddress
 
-@app.route("/")
-def index():
-	return render_template('index.html')
+@app.route("/", defaults={'element': 'leasetime'})
+@app.route("/<element>")
+def index(element):
+    return render_template('index.html', element=element)
 
-@app.route("/leases")
-def getLeases():
+@app.route("/leases/", defaults={'element': 'leasetime'})
+@app.route("/leases/<element>")
+def getLeases(element):
 	leases = list()
 	with open(DNSMASQ_LEASES_FILE) as f:
 		for line in f:
@@ -58,7 +62,12 @@ def getLeases():
 						   elements[3])
 				leases.append(entry)
 
-	leases.sort(key = leaseSort)
+	if element=="staticIP":
+        # special case for static(y/n) - sort on staticIP,IP # Fixed IPs first
+		leases.sort(key = leaseSort)
+	else:
+		leases.sort(key=attrgetter( element ))
+
 	return jsonify(leases=[lease.serialize() for lease in leases])
 
 

@@ -21,14 +21,18 @@
 	<body>
 	<table id="leases">
 		<tr>
-			<th>IP Address</th><th>Mac Address</th><th>Name</th><th>Static IP?</th><th>Lease ends on</th>
+			<th><a href="ipAddress">IP Address</a></th>
+			<th><a href="macAddress">Mac Address</a></th>
+			<th><a href="name">Name</a></th>
+			<th><a href="staticIP">Static IP</a></th>
+			<th><a href="leasetime">Lease ends on</a></th>
 		</tr>
 	</table>
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
 	<script>
 		$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 		$(function() {
-			$.getJSON($SCRIPT_ROOT + '/leases',
+			$.getJSON($SCRIPT_ROOT + '/leases/{{ element }}',
 			function(data) {
 				$('#leases').append(
 					$.map(data.leases, function(ignore, index) {
