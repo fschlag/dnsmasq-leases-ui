@@ -17,33 +17,139 @@
 		tr:hover {
 			background: #ccc;
 		}
+		th a {
+			text-decoration: none;
+			color: inherit;
+			cursor: pointer;
+		}
+		th a:hover {
+			text-decoration: underline;
+		}
+		th.sorted a {
+			font-weight: bold;
+		}
+		.sort-indicator {
+			display: inline-block;
+			width: 1em;
+			color: #888;
+		}
 	</style>
 	<body>
 	<table id="leases">
-		<tr>
-			<th><a href="ipAddress">IP Address</a></th>
-			<th><a href="macAddress">Mac Address</a></th>
-			<th><a href="name">Name</a></th>
-			<th><a href="staticIP">Static IP</a></th>
-			<th><a href="leasetime">Lease ends on</a></th>
-		</tr>
+		<thead>
+			<tr>
+				<th data-key="ipAddress"><a href="#ipAddress">IP Address</a><span class="sort-indicator"></span></th>
+				<th data-key="macAddress"><a href="#macAddress">Mac Address</a><span class="sort-indicator"></span></th>
+				<th data-key="name"><a href="#name">Name</a><span class="sort-indicator"></span></th>
+				<th data-key="staticIP"><a href="#staticIP">Static IP</a><span class="sort-indicator"></span></th>
+				<th data-key="leasetime"><a href="#leasetime">Lease ends on</a><span class="sort-indicator"></span></th>
+			</tr>
+		</thead>
+		<tbody></tbody>
 	</table>
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
 	<script>
 		$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 		$(function() {
-			$.getJSON($SCRIPT_ROOT + '/leases/{{ element }}',
-			function(data) {
-				$('#leases').append(
-					$.map(data.leases, function(ignore, index) {
-						return '<tr>' +
-							'<td>' + data.leases[index].ipAddress + '</td>' +
-							'<td>' + data.leases[index].macAddress + '</td>' +
-							'<td>' + data.leases[index].name + '</td>' +
-							'<td>' + ( (data.leases[index].staticIP) ? 'Yes' : 'No' ) + '</td>' +
-							'<td>' + ( (data.leases[index].staticIP) ? 'Never' : data.leases[index].leasetime ) + '</td>' +
-							'</tr>';
-						}).join());
+			var STORAGE_KEY = 'dnsmasq-leases-sort';
+			var DEFAULT_SORT = { column: 'ipAddress', dir: 'asc' };
+			var leases = [];
+
+			function loadSort() {
+				try {
+					var raw = localStorage.getItem(STORAGE_KEY);
+					if (raw) {
+						var parsed = JSON.parse(raw);
+						if (parsed && parsed.column && parsed.dir) return parsed;
+					}
+				} catch (e) {}
+				return $.extend({}, DEFAULT_SORT);
+			}
+
+			function saveSort(sort) {
+				try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sort)); } catch (e) {}
+			}
+
+			var currentSort = loadSort();
+
+			function ipToTuple(ip) {
+				if (typeof ip !== 'string') return [0,0,0,0,0,0,0,0];
+				if (ip.indexOf('.') !== -1 && ip.indexOf(':') === -1) {
+					return ip.split('.').map(function(p) { return parseInt(p, 10) || 0; });
+				}
+				return [ip];
+			}
+
+			function cmp(a, b, column) {
+				var va = a[column], vb = b[column];
+				if (column === 'ipAddress') {
+					var ta = ipToTuple(va), tb = ipToTuple(vb);
+					for (var i = 0; i < Math.max(ta.length, tb.length); i++) {
+						var ea = ta[i] || 0, eb = tb[i] || 0;
+						if (ea < eb) return -1;
+						if (ea > eb) return 1;
+					}
+					return 0;
+				}
+				if (column === 'staticIP') {
+					if (va === vb) return cmp(a, b, 'ipAddress');
+					return va ? -1 : 1;
+				}
+				if (va < vb) return -1;
+				if (va > vb) return 1;
+				return 0;
+			}
+
+			function render() {
+				var sorted = leases.slice().sort(function(a, b) {
+					var c = cmp(a, b, currentSort.column);
+					return currentSort.dir === 'desc' ? -c : c;
+				});
+				var $tbody = $('#leases tbody').empty();
+				$tbody.append($.map(sorted, function(row) {
+					return '<tr>' +
+						'<td>' + row.ipAddress + '</td>' +
+						'<td>' + row.macAddress + '</td>' +
+						'<td>' + row.name + '</td>' +
+						'<td>' + (row.staticIP ? 'Yes' : 'No') + '</td>' +
+						'<td>' + (row.staticIP ? 'Never' : row.leasetime) + '</td>' +
+						'</tr>';
+				}).join(''));
+				updateIndicators();
+			}
+
+			function updateIndicators() {
+				$('#leases th').each(function() {
+					var $th = $(this);
+					var key = $th.data('key');
+					var $ind = $th.find('.sort-indicator');
+					if (key === currentSort.column) {
+						$th.addClass('sorted');
+						$ind.text(currentSort.dir === 'asc' ? ' ▲' : ' ▼');
+					} else {
+						$th.removeClass('sorted');
+						$ind.text('');
+					}
+				});
+			}
+
+			$('#leases').on('click', 'th a', function(e) {
+				e.preventDefault();
+				var key = $(this).closest('th').data('key');
+				if (currentSort.column === key) {
+					currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+				} else {
+					currentSort = { column: key, dir: 'asc' };
+				}
+				saveSort(currentSort);
+				render();
+			});
+
+			updateIndicators();
+
+			$.getJSON($SCRIPT_ROOT + '/leases/', function(data) {
+				leases = data.leases;
+				render();
 			});
 
 			return false;
