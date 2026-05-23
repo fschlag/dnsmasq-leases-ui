@@ -7,7 +7,7 @@
 
 Tiny web UI for the [dnsmasq](https://thekelleys.org.uk/dnsmasq/doc.html) DHCP leases file. Sortable, searchable table with dark mode and a JSON endpoint.
 
-![Screenshot](https://raw.githubusercontent.com/fschlag/docs/master/dnsmasq-leases-ui-docs/screenshot_1.png)
+![Screenshot](https://raw.githubusercontent.com/fschlag/dnsmasq-leases-ui/main/docs/screenshot.png)
 
 ## Features
 
