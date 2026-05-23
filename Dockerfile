@@ -1,19 +1,12 @@
-FROM python:3.6.8-alpine
-
-RUN echo '* Installing OS dependencies' \
-  && apk add --update --no-cache build-base
+FROM python:3.12-alpine
 
 WORKDIR /app
+
 COPY ./requirements.txt ./
-
-RUN echo '* Installing Python dependencies' \
-  && pip install -r requirements.txt \
-  && echo '* Removing unneeded OS packages' \
-  && apk del build-base
-
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./templates ./templates
-COPY ./dnsmasq-leases-ui.py ./
+COPY ./dnsmasq_leases_ui.py ./
 
 EXPOSE 5000
-CMD ["python", "dnsmasq-leases-ui.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "-w", "2", "dnsmasq_leases_ui:app"]

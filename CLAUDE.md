@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Run locally (venv at `.venv/`, already provisioned):
 ```
-.venv/bin/python dnsmasq-leases-ui.py
+.venv/bin/python dnsmasq_leases_ui.py
 ```
 Recreate if missing: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
-Serves on `0.0.0.0:5000`. Reads `/var/lib/misc/dnsmasq.leases` (path hardcoded in `DNSMASQ_LEASES_FILE`).
+Serves on `0.0.0.0:5000` (dev mode uses Flask dev server; container uses gunicorn). Reads `/var/lib/misc/dnsmasq.leases` (path hardcoded in `DNSMASQ_LEASES_FILE`).
 
 Docker build/run:
 ```
@@ -24,7 +24,13 @@ Local Docker test with sample leases:
 ```
 Builds image, mounts `dnsmasq.leases.sample` as the leases file, runs foreground (`--rm -it`).
 
-No tests, no linter configured.
+No tests. Lint + format via `ruff` (config in `pyproject.toml`):
+```
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/ruff check .        # lint
+.venv/bin/ruff format .       # auto-format
+.venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
+```
 
 Local testing without real dnsmasq: `dnsmasq.leases.sample` ships fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override the hardcoded path via env-edit or symlink:
 ```
@@ -34,11 +40,11 @@ or patch `DNSMASQ_LEASES_FILE` for the session.
 
 ## Architecture
 
-Single-file Flask app (`dnsmasq-leases-ui.py`) + one Jinja template (`templates/index.html`).
+Single-file Flask app (`dnsmasq_leases_ui.py`) + one Jinja template (`templates/index.html`).
 
-- `/` → renders `index.html`. Client-side JS (jQuery from CDN) fetches `/leases` and builds the table in the browser. Template itself contains no lease data.
-- `/leases` → parses dnsmasq leases file on each request, returns JSON.
+- `/` → renders `index.html`. Client-side vanilla JS fetches `/leases`, sorts and builds the table in the browser using `textContent` (no HTML injection). Template itself contains no lease data.
+- `/leases` → parses dnsmasq leases file on each request, returns JSON. Sorting is client-side only.
 
 Lease file format expected: space-separated `leasetime mac ip name client-id` per line. Lines without exactly 5 fields are skipped — this filters out the IPv6 `duid ...` server-id line that dnsmasq writes when serving IPv6 (see commit 3639347).
 
-`LeaseEntry.staticIP` is `True` when `leasetime == '0'`. Sort key (`leaseSort`) prefixes static entries with `'0'` so they list before dynamic entries, then sorts by IP string (lexicographic, not numeric — `192.168.0.10` sorts before `192.168.0.2`).
+`LeaseEntry.staticIP` is `True` when `leasetime == '0'`. Client `cmp()` puts static entries first, sorts IPv4 numerically by octet tuple.
