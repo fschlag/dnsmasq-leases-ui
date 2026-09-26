@@ -1,4 +1,3 @@
-
 """Web UI for dnsmasq leases file."""
 
 from dataclasses import asdict, dataclass
@@ -27,7 +26,9 @@ MAC_RE = re.compile(r"^(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$")
 
 @dataclass
 class LeaseEntry:
-    dhcpReservation: bool
+    # Keep the original JSON field name so the existing frontend continues
+    # to work. Its meaning is now "DHCP reservation", not "infinite lease".
+    staticIP: bool
     leasetime: str
     macAddress: str
     ipAddress: str
@@ -43,6 +44,9 @@ class LeaseEntry:
         client_id: str,
         reservations: "DhcpReservations",
     ) -> "LeaseEntry":
+        # A host is a DHCP reservation when it is found in
+        # /etc/dnsmasq.dhcphosts. This also works for DHCPv6 leases whose
+        # current IPv6 address is different from the address in dhcp-hosts.
         reserved = reservations.matches(
             identifier=identifier,
             ip=ip,
@@ -50,8 +54,8 @@ class LeaseEntry:
             client_id=client_id,
         )
 
-        # A reservation can have a finite DHCP lease. Only dnsmasq's
-        # lease-time value 0 means "Never".
+        # Keep the actual lease expiry visible. "Never" only means that
+        # dnsmasq reported an infinite lease (lease time 0).
         if leasetime == "0":
             lease_end = "Never"
         else:
@@ -60,7 +64,7 @@ class LeaseEntry:
             )
 
         return cls(
-            dhcpReservation=reserved,
+            staticIP=reserved,
             leasetime=lease_end,
             macAddress=identifier.upper(),
             ipAddress=ip,
@@ -85,6 +89,7 @@ class DhcpReservations:
         return value.strip().casefold()
 
     def add_line(self, line: str) -> None:
+        # Remove comments.
         line = line.split("#", 1)[0].strip()
         if not line:
             return
@@ -93,9 +98,10 @@ class DhcpReservations:
         if not fields:
             return
 
-        # Explicit IPv4/IPv6 addresses from dhcp-host entries.
+        # Store explicit IPv4/IPv6 addresses and MAC addresses.
         for field in fields:
             candidate = field.strip("[]")
+
             try:
                 self.ips.add(str(ip_address(candidate)))
                 continue
@@ -103,11 +109,14 @@ class DhcpReservations:
                 pass
 
             if MAC_RE.fullmatch(candidate):
-                self.identifiers.add(self._normalise_identifier(candidate))
+                self.identifiers.add(
+                    self._normalise_identifier(candidate)
+                )
 
-        # In the usual dhcp-host syntax the hostname is the final ordinary
-        # field. Matching it is important for DHCPv6 because the IPv6 address
-        # in the lease file can differ from the address written in dhcp-hosts.
+        # In the dhcp-host syntax used by this dnsmasq setup, the hostname
+        # is the last ordinary field. Hostname matching is essential for
+        # DHCPv6 because dnsmasq.leases can contain an IAID/DUID and an
+        # IPv6 address that is not textually identical to dhcp-hosts.
         for field in reversed(fields):
             candidate = field.strip().strip("[]")
             lower = candidate.casefold()
@@ -140,8 +149,7 @@ class DhcpReservations:
             self.names.add(self._normalise_name(candidate))
             break
 
-        # Retain non-MAC identifiers in the first field for dhcp-host entries
-        # that use a client identifier rather than a MAC address.
+        # Preserve non-MAC identifiers in the first field as well.
         first = fields[0].strip().strip("[]")
         if first and not MAC_RE.fullmatch(first):
             try:
@@ -150,7 +158,9 @@ class DhcpReservations:
                 if not first.casefold().startswith(
                     ("set:", "tag:", "id:", "net:", "bootfile=")
                 ):
-                    self.identifiers.add(self._normalise_identifier(first))
+                    self.identifiers.add(
+                        self._normalise_identifier(first)
+                    )
 
     def matches(
         self,
@@ -159,17 +169,21 @@ class DhcpReservations:
         name: str,
         client_id: str,
     ) -> bool:
+        # 1. Exact IP match.
         try:
             if str(ip_address(ip)) in self.ips:
                 return True
         except ValueError:
             pass
 
-        # Case-insensitive hostname match. This handles e.g.
-        # iPhone-Micha in dhcp-hosts vs iphone-micha in dnsmasq.leases.
+        # 2. Hostname match.
+        # This is the important part for your DHCPv6 leases:
+        #   dhcphosts: iPhone-Micha
+        #   leases:    iphone-micha
         if name and self._normalise_name(name) in self.names:
             return True
 
+        # 3. MAC/client identifier match.
         if identifier and self._normalise_identifier(identifier) in self.identifiers:
             return True
 
@@ -187,6 +201,7 @@ def read_reservations() -> DhcpReservations:
             for line in f:
                 reservations.add_line(line)
     except FileNotFoundError:
+        # Optional file: preserve the original behaviour if it is not mounted.
         pass
 
     return reservations
@@ -200,7 +215,7 @@ def read_leases() -> list[LeaseEntry]:
         for line in f:
             parts = line.split()
 
-            # dnsmasq.leases:
+            # dnsmasq.leases format:
             # lease-end identifier ip hostname client-id
             if len(parts) != 5:
                 continue
