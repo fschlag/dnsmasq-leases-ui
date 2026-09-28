@@ -28,7 +28,7 @@ Pull from either registry:
 docker run -d --name dnsmasq-leases-ui \
   -p 5000:5000 \
   -v /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.leases:ro \
-  -V /etc/dnsmasq.dhcphosts:/etc/dnsmasq.dhcphosts:ro \
+  -v /etc/dnsmasq.dhcphosts:/etc/dnsmasq.dhcphosts:ro \
   ghcr.io/fschlag/dnsmasq-leases-ui:latest
   # or: fschlag/dnsmasq-leases-ui:latest  (Docker Hub)
 ```
