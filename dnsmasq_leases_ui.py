@@ -50,7 +50,11 @@ class LeaseEntry:
         # A host is a DHCP reservation when it is found in
         # /etc/dnsmasq.dhcphosts. This also works for DHCPv6 leases whose
         # current IPv6 address is different from the address in dhcp-hosts.
-        reserved = reservations.matches(
+        #
+        # An infinite lease still counts, so the column keeps working when the
+        # dhcp-hosts file is not mounted: dnsmasq only writes lease time 0 for
+        # a host configured with an infinite lease, never for a dhcp-range one.
+        reserved = leasetime == "0" or reservations.matches(
             identifier=identifier,
             ip=ip,
             name=name,

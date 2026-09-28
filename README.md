@@ -35,6 +35,11 @@ docker run -d --name dnsmasq-leases-ui \
 
 Open `http://<host>:5000`.
 
+The `dnsmasq.dhcphosts` mount is optional. Without it only reservations with an
+infinite lease are recognised, because that is all the leases file reveals; mount
+it to also flag reservations that are served with a normal lease time. Override
+either path with `DNSMASQ_LEASES_FILE` / `DNSMASQ_HOSTS_FILE`.
+
 ### docker-compose
 
 ```yaml
