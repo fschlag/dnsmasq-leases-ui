@@ -1,0 +1,17 @@
+# The ruff pin in requirements-dev.txt is exact so that contributors and CI run
+# the same formatter. That is only safe while something keeps it moving, hence
+# these updates: a ruff bump arrive as a PR that ci.yml check.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-tooling:
+        patterns: ["ruff", "pytest", "pytest-cov"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

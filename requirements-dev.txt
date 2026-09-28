@@ -1,4 +1,4 @@
 -r requirements.txt
-ruff>=0.8
+ruff==0.16.9
 pytest>=8
 pytest-cov>=6
