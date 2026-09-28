@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0](https://github.com/fschlag/dnsmasq-leases-ui/compare/v1.0.0...v1.1.0) (2026-09-28)
+
+
+### Features
+
+* Add support for dnsmasq.dhcphosts to properly display DHCP reservations. - [#7](https://github.com/fschlag/dnsmasq-leases-ui/issues/7) ([#8](https://github.com/fschlag/dnsmasq-leases-ui/issues/8)) ([35d41cb](https://github.com/fschlag/dnsmasq-leases-ui/commit/35d41cb225136daea4cf348bdb302b578e28199d))
+* **parser:** match reservations keyed by duid ([8c6dbe9](https://github.com/fschlag/dnsmasq-leases-ui/commit/8c6dbe9e4a2bbb87e8aee86bf01f533614c6c634))
+
+
+### Bug Fixes
+
+* **deps:** pick up dependency bumps for release ([afd354a](https://github.com/fschlag/dnsmasq-leases-ui/commit/afd354a20feda9456d6de53afdb13833ce9b65eb))
+* keep flagging infinite leases without a dhcp-hosts file ([aee6360](https://github.com/fschlag/dnsmasq-leases-ui/commit/aee63602c3f9fdf26d8e5f1342ae5ba3d3eebdce))
+* **parser:** ignore per-host lease time in dhcp-hosts entries ([6b9f4f0](https://github.com/fschlag/dnsmasq-leases-ui/commit/6b9f4f0822f3c992a2b2b5efb3c4c04903ff8528))
+* return 503 instead of a traceback when leases file unreadable ([846ddc8](https://github.com/fschlag/dnsmasq-leases-ui/commit/846ddc8e8c8d41a668ebec9e86dc8925e83dade5))
+* **ui:** show the real lease end for DHCP reservations ([d6c25b6](https://github.com/fschlag/dnsmasq-leases-ui/commit/d6c25b6b37d26a506411ce7798a12f311365ff32))
+
 ## 1.0.0 (2026-05-23)
 
 
