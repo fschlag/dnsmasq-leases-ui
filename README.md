@@ -79,7 +79,10 @@ Issues and PRs welcome. See [CLAUDE.md](CLAUDE.md) for the dev setup, commit con
 
 ## Credits
 
-Theme-toggle icons: [Feather Icons](https://feathericons.com/) (MIT, see [NOTICE](NOTICE)).
+- Theme-toggle icons: [Feather Icons](https://feathericons.com/) (MIT)
+- Favicon: [Lucide](https://lucide.dev/) (ISC)
+
+Full attributions in [NOTICE](NOTICE).
 
 ## License
 
