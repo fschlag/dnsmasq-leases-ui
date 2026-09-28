@@ -32,7 +32,7 @@ Tests via `pytest` (`tests/`, fixtures in `tests/samples.py` captured from a rea
 node --test 'tests/js/*.test.mjs'   # lease-table js (node 24 reject a bare directory)
 ```
 `leases` fixture (`tests/conftest.py`) monkeypatch the two path globals (read per call, so patch work). Never hardcode a formatted lease-end in test — `datetime.fromtimestamp` is local time, container run UTC.
-Table JS live in `static/leases.js` (pure, `node:test` cover it in `tests/js/`) + `static/app.js` (DOM wiring + fetch, machine-untested). `tests/test_template.py` only assert the page reference the module.
+Table JS live in `static/leases.js` (pure) + `static/app.js` (DOM wiring + fetch); `tests/js/` cover both, the latter through `dom-stub.mjs` (no browser). app.js run its fetch at import time and ESM cache per process, so each import need it own test file. `tests/test_template.py` only assert the page reference the module.
 
 Lint + format via `ruff` (config in `pyproject.toml`):
 ```
