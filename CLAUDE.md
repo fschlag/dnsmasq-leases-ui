@@ -36,6 +36,7 @@ Lint + format via `ruff` (config in `pyproject.toml`):
 .venv/bin/ruff format .       # auto-format
 .venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
 ```
+`.github/workflows/ci.yml` run these two plus `pytest` on every PR and on `main` (Python 3.12).
 
 Local test without real dnsmasq: `local/dnsmasq.leases.sample` ship fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
 ```
