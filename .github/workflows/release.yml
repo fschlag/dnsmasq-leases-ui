@@ -39,7 +39,7 @@ jobs:
           echo "release_date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ghcr.io/${{ github.repository }}
