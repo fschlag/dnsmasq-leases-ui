@@ -269,7 +269,7 @@
 				row.macAddress,
 				row.name,
 				row.staticIP ? 'Yes' : 'No',
-				row.staticIP ? 'Never' : row.leasetime,
+				row.leasetime,
 			]) {
 				const td = document.createElement('td');
 				td.textContent = val;
