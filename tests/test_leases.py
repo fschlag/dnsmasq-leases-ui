@@ -1,8 +1,12 @@
 """Reading dnsmasq.leases, including without a dhcp-hosts file."""
 
 import json
+import os
 from datetime import datetime
 
+import pytest
+
+import dnsmasq_leases_ui as app_module
 from dnsmasq_leases_ui import app
 from tests.samples import IPV4_HOSTS, IPV4_LEASES
 
@@ -66,3 +70,59 @@ class TestLeasesEndpoint:
             "reserved-c": True,
             "reserved-d": True,
         }
+
+
+class TestUnreadableFiles:
+    """A mount typo or a permission problem is a deployment fault, not a crash."""
+
+    def test_missing_leases_file_returns_503(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            app_module, "DNSMASQ_LEASES_FILE", str(tmp_path / "does-not-exist.leases")
+        )
+        with app.test_client() as client:
+            response = client.get("/leases")
+        assert response.status_code == 503
+        assert json.loads(response.get_data(as_text=True))["error"]
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file permissions")
+    def test_unreadable_leases_file_returns_503(self, tmp_path, monkeypatch):
+        leases_file = tmp_path / "dnsmasq.leases"
+        leases_file.write_text(IPV4_LEASES)
+        leases_file.chmod(0o000)
+        monkeypatch.setattr(app_module, "DNSMASQ_LEASES_FILE", str(leases_file))
+        try:
+            with app.test_client() as client:
+                assert client.get("/leases").status_code == 503
+        finally:
+            leases_file.chmod(0o644)
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file permissions")
+    def test_unreadable_hosts_file_is_ignored(self, tmp_path, monkeypatch):
+        """The dhcp-hosts file is optional, so it must not break the page."""
+        leases_file = tmp_path / "dnsmasq.leases"
+        leases_file.write_text(IPV4_LEASES)
+        hosts_file = tmp_path / "dnsmasq.dhcphosts"
+        hosts_file.write_text(IPV4_HOSTS)
+        hosts_file.chmod(0o000)
+        monkeypatch.setattr(app_module, "DNSMASQ_LEASES_FILE", str(leases_file))
+        monkeypatch.setattr(app_module, "DNSMASQ_HOSTS_FILE", str(hosts_file))
+        try:
+            with app.test_client() as client:
+                response = client.get("/leases")
+            assert response.status_code == 200
+            rows = json.loads(response.get_data(as_text=True))["leases"]
+            # Falls back to the infinite-lease signal only.
+            assert {row["name"]: row["staticIP"] for row in rows}["reserved-c"] is True
+        finally:
+            hosts_file.chmod(0o644)
+
+
+class TestCorruptLines:
+    def test_non_numeric_lease_time_is_skipped(self, leases):
+        entries = leases(
+            "notanumber 02:aa:00:00:00:09 172.31.77.109 corrupt-a 01:02:aa:00:00:00:09\n"
+            "-5 02:aa:00:00:00:0a 172.31.77.110 corrupt-b 01:02:aa:00:00:00:0a\n" + IPV4_LEASES
+        )
+        assert "corrupt-a" not in entries
+        assert "corrupt-b" not in entries
+        assert len(entries) == 4

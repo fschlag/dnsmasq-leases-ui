@@ -205,8 +205,9 @@ def read_reservations() -> DhcpReservations:
         with open(DNSMASQ_HOSTS_FILE, encoding="utf-8") as f:
             for line in f:
                 reservations.add_line(line)
-    except FileNotFoundError:
-        # Optional file: preserve the original behaviour if it is not mounted.
+    except OSError:
+        # Optional file: preserve the original behaviour when it is not mounted,
+        # and do not fail the page when it is there but unreadable.
         pass
 
     return reservations
@@ -223,6 +224,11 @@ def read_leases() -> list[LeaseEntry]:
             # dnsmasq.leases format:
             # lease-end identifier ip hostname client-id
             if len(parts) != 5:
+                continue
+
+            # A corrupt lease time must not take down the whole page. dnsmasq
+            # write a plain integer (0 for an infinite lease).
+            if not parts[0].isdigit():
                 continue
 
             leases.append(
@@ -251,7 +257,16 @@ def index():
 
 @app.route("/leases")
 def get_leases():
-    return jsonify(leases=[asdict(lease) for lease in read_leases()])
+    try:
+        leases = read_leases()
+    except OSError as exc:
+        # A missing or unreadable leases file is a deployment problem (mount
+        # typo, permissions), not a crash: the frontend show its error banner
+        # for any non-OK response.
+        app.logger.warning("cannot read %s: %s", DNSMASQ_LEASES_FILE, exc)
+        return jsonify(error="leases file unavailable"), 503
+
+    return jsonify(leases=[asdict(lease) for lease in leases])
 
 
 if __name__ == "__main__":
