@@ -28,9 +28,11 @@ Build image, mount `local/dnsmasq.leases.sample` as leases file, run foreground 
 Tests via `pytest` (`tests/`, fixtures in `tests/samples.py` captured from a real dnsmasq 2.90):
 ```
 .venv/bin/python -m pytest
+.venv/bin/python -m pytest --cov=dnsmasq_leases_ui --cov-report=term-missing   # coverage
+node --test 'tests/js/*.test.mjs'   # lease-table js (node 24 reject a bare directory)
 ```
 `leases` fixture (`tests/conftest.py`) monkeypatch the two path globals (read per call, so patch work). Never hardcode a formatted lease-end in test — `datetime.fromtimestamp` is local time, container run UTC.
-No JS test harness: to exercise table JS, extract `render()` from the template and run under `node` with a stub `document` (how the "Never" override bug was caught). `tests/test_template.py` hold string-level guard only.
+Table JS live in `static/leases.js` (pure, `node:test` cover it in `tests/js/`) + `static/app.js` (DOM wiring + fetch, machine-untested). `tests/test_template.py` only assert the page reference the module.
 
 Lint + format via `ruff` (config in `pyproject.toml`):
 ```
@@ -39,7 +41,7 @@ Lint + format via `ruff` (config in `pyproject.toml`):
 .venv/bin/ruff format .       # auto-format
 .venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
 ```
-`.github/workflows/ci.yml` run these two plus `pytest` on every PR and on `main` (Python 3.12).
+`.github/workflows/ci.yml` run three job on every PR and on `main`: `python` (ruff + pytest, 3.12), `js` (`node --test`), `docker` (build image, serve sample leases, assert `/`, `/leases`, both module and the icon answer 200).
 `ruff>=0.8` unpinned: local venv 0.15, fresh CI install 0.16 — format rule can drift between them.
 
 Local test without real dnsmasq: `local/dnsmasq.leases.sample` ship fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
@@ -47,6 +49,7 @@ Local test without real dnsmasq: `local/dnsmasq.leases.sample` ship fixture line
 DNSMASQ_LEASES_FILE="$PWD/local/dnsmasq.leases.sample" .venv/bin/python dnsmasq_leases_ui.py
 ```
 `HOST` and `PORT` env vars also override dev-server bind (gunicorn ignore; use `-b` instead).
+On macOS port 5000 is AirPlay Receiver — every request answer 403 and the dev server never bind. Use `PORT=5099` locally.
 
 Validate against real dnsmasq (unit test not cover lease-file shape):
 ```
@@ -59,14 +62,14 @@ docker run --mac-address <mac> --privileged ... dhcpcd -6 -h <name> -t 25 eth0  
 
 ## Architecture
 
-Single-file Flask app (`dnsmasq_leases_ui.py`) + one Jinja template (`templates/index.html`).
+Single-file Flask app (`dnsmasq_leases_ui.py`) + one Jinja template (`templates/index.html`) + two ES module in `static/`.
 
-- `/` → render `index.html`. Client-side vanilla JS fetch `/leases`, sort + build table in browser via `textContent` (no HTML injection). Template hold no lease data.
-- `/leases` → parse dnsmasq leases file per request, return JSON. Sort client-side only.
+- `/` → render `index.html`, which load `static/app.js` (ES module, `script_root` pass via a `<body data-script-root>` attribute). JS fetch `/leases`, sort + build table via `textContent` (no HTML injection). Template hold no lease data. Pre-paint theme script stay inline on purpose.
+- `/leases` → parse dnsmasq leases file per request, return JSON. Sort client-side only. Unreadable leases file → 503 `{"error": ...}` (frontend show its banner); dhcp-hosts file unreadable → ignored, it is optional.
 
 Lease file format: space-separated `leasetime mac ip name client-id` per line. Lines without exactly 5 fields skipped — filter out IPv6 `duid ...` server-id line dnsmasq write when serve IPv6 (see commit 3639347).
 
-DHCPv6 line differ: field 2 = IAID (decimal, not MAC), field 5 = DUID, address often not the one in `dhcp-hosts` — hostname is the only link to its reservation. `dhcp-host` line may end with per-host lease time (`12h`, `infinite`) which is not a hostname.
+DHCPv6 line differ: field 2 = IAID (decimal, not MAC), field 5 = DUID, address often not the one in `dhcp-hosts` — hostname or DUID is the only link to its reservation. `dhcp-host` line may end with per-host lease time (`12h`, `infinite`) which is not a hostname. `dhcp-host=id:<duid>,name` key by client-id/DUID (`id:*` deliberately ignored: leases file write `*` for "no client-id").
 
 `LeaseEntry.staticIP` = `True` when lease match a `dnsmasq.dhcphosts` reservation (IP, hostname, or MAC/DUID) **or** `leasetime == '0'` (infinite lease — keep column work when hosts file not mounted). JSON key keep old name; UI header say "DHCP Reservation". Client `cmp()` put reservations first, sort IPv4 numerically by octet tuple.
 
