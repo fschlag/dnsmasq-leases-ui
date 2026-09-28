@@ -7,6 +7,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: fix
+      prefix-development: chore
     groups:
       dev-tooling:
         patterns: ["ruff", "pytest", "pytest-cov"]
@@ -15,3 +18,5 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: chore
