@@ -8,8 +8,8 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: fix
-      prefix-development: chore
+      prefix: "fix(deps)"
+      prefix-development: "chore(deps-dev)"
     groups:
       dev-tooling:
         patterns: ["ruff", "pytest", "pytest-cov"]
@@ -19,4 +19,4 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: chore
+      prefix: "chore(deps)"
