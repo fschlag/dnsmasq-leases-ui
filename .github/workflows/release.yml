@@ -15,6 +15,17 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # Every tag pattern below resolves from GITHUB_REF_NAME, so a run on a
+      # branch publishes no semver tags and stamps APP_VERSION=<branch> while
+      # still overwriting :latest. Fail before either login rather than ship
+      # that. Dispatching against a v* tag ref stays allowed, to retry a
+      # release whose publish failed without cutting a new tag.
+      - name: Refuse runs that are not on a release tag
+        if: github.ref_type != 'tag' || !startsWith(github.ref_name, 'v')
+        run: |
+          echo "::error::release.yml publishes release images and must run on a v*.*.* tag, got ${{ github.ref_type }} '${{ github.ref_name }}'. Merge the release-please PR to cut a release instead."
+          exit 1
+
       - uses: actions/checkout@v7
 
       - uses: docker/setup-qemu-action@v4
