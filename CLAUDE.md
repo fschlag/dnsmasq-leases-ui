@@ -9,13 +9,14 @@ Run local (venv at `.venv/`, already provisioned):
 .venv/bin/python dnsmasq_leases_ui.py
 ```
 Recreate if gone: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
-Serve `0.0.0.0:5000` (dev = Flask dev server; container = gunicorn). Read `/var/lib/misc/dnsmasq.leases` (path hardcoded in `DNSMASQ_LEASES_FILE`).
+Serve `0.0.0.0:5000` (dev = Flask dev server; container = gunicorn). Read `/var/lib/misc/dnsmasq.leases` (`DNSMASQ_LEASES_FILE`) + optional `/etc/dnsmasq.dhcphosts` (`DNSMASQ_HOSTS_FILE`) — missing hosts file not error.
 
 Docker build/run:
 ```
 docker build -t dnsmasq-leases-ui .
 docker run -p 5000:5000 -v /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.leases:ro dnsmasq-leases-ui
 ```
+`docker build` under the buildx docker-container driver not load image into daemon — add `--load`, else `docker run` fail "pull access denied" (affect `local/run-local.sh` too).
 
 Local Docker test with sample leases:
 ```
@@ -28,6 +29,8 @@ Tests via `pytest` (`tests/`, fixtures in `tests/samples.py` captured from a rea
 ```
 .venv/bin/python -m pytest
 ```
+`leases` fixture (`tests/conftest.py`) monkeypatch the two path globals (read per call, so patch work). Never hardcode a formatted lease-end in test — `datetime.fromtimestamp` is local time, container run UTC.
+No JS test harness: to exercise table JS, extract `render()` from the template and run under `node` with a stub `document` (how the "Never" override bug was caught). `tests/test_template.py` hold string-level guard only.
 
 Lint + format via `ruff` (config in `pyproject.toml`):
 ```
@@ -37,12 +40,22 @@ Lint + format via `ruff` (config in `pyproject.toml`):
 .venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
 ```
 `.github/workflows/ci.yml` run these two plus `pytest` on every PR and on `main` (Python 3.12).
+`ruff>=0.8` unpinned: local venv 0.15, fresh CI install 0.16 — format rule can drift between them.
 
 Local test without real dnsmasq: `local/dnsmasq.leases.sample` ship fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
 ```
 DNSMASQ_LEASES_FILE="$PWD/local/dnsmasq.leases.sample" .venv/bin/python dnsmasq_leases_ui.py
 ```
 `HOST` and `PORT` env vars also override dev-server bind (gunicorn ignore; use `-b` instead).
+
+Validate against real dnsmasq (unit test not cover lease-file shape):
+```
+docker network create --subnet 172.31.77.0/24 dhcptest     # add --ipv6 --subnet fd00:77::/64 for DHCPv6
+# alpine + `apk add dnsmasq dhcpcd`; run `dnsmasq -k` with dhcp-range + dhcp-hostsfile + dhcp-leasefile in a bind-mounted dir, then mount that leases file into the UI container
+docker run --mac-address <mac> ... udhcpc -i eth0 -n -q -f -s /bin/true -x hostname:<name>   # DHCPv4 client
+docker run --mac-address <mac> --privileged ... dhcpcd -6 -h <name> -t 25 eth0               # DHCPv6 client
+```
+`dhcpcd -6` need `--privileged` (else `if_init: Read-only file system`); DHCPv6 need `enable-ra` in dnsmasq conf. `docker kill -s HUP` reload dhcp-hostsfile.
 
 ## Architecture
 
@@ -53,7 +66,9 @@ Single-file Flask app (`dnsmasq_leases_ui.py`) + one Jinja template (`templates/
 
 Lease file format: space-separated `leasetime mac ip name client-id` per line. Lines without exactly 5 fields skipped — filter out IPv6 `duid ...` server-id line dnsmasq write when serve IPv6 (see commit 3639347).
 
-`LeaseEntry.staticIP` = `True` when `leasetime == '0'`. Client `cmp()` put static first, sort IPv4 numerically by octet tuple.
+DHCPv6 line differ: field 2 = IAID (decimal, not MAC), field 5 = DUID, address often not the one in `dhcp-hosts` — hostname is the only link to its reservation. `dhcp-host` line may end with per-host lease time (`12h`, `infinite`) which is not a hostname.
+
+`LeaseEntry.staticIP` = `True` when lease match a `dnsmasq.dhcphosts` reservation (IP, hostname, or MAC/DUID) **or** `leasetime == '0'` (infinite lease — keep column work when hosts file not mounted). JSON key keep old name; UI header say "DHCP Reservation". Client `cmp()` put reservations first, sort IPv4 numerically by octet tuple.
 
 ## Commit conventions
 
