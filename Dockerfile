@@ -17,6 +17,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY templates ./templates
+COPY static ./static
 COPY dnsmasq_leases_ui.py NOTICE ./
 
 USER nobody

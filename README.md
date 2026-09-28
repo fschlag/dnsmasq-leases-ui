@@ -28,6 +28,7 @@ Pull from either registry:
 docker run -d --name dnsmasq-leases-ui \
   -p 5000:5000 \
   -v /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.leases:ro \
+  -v /etc/dnsmasq.dhcphosts:/etc/dnsmasq.dhcphosts:ro \
   ghcr.io/fschlag/dnsmasq-leases-ui:latest
   # or: fschlag/dnsmasq-leases-ui:latest  (Docker Hub)
 ```
@@ -43,6 +44,7 @@ services:
     ports: ["5000:5000"]
     volumes:
       - /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.leases:ro
+      - /etc/dnsmasq.dhcphosts:/etc/dnsmasq.dhcphosts:ro
     restart: unless-stopped
 ```
 
