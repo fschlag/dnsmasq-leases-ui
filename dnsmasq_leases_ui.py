@@ -19,6 +19,13 @@ app = Flask(__name__)
 
 MAC_RE = re.compile(r"^(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$")
 
+# A dhcp-host line may end with a per-host lease time ("12h", "45m", "3600",
+# "infinite"), which is not a hostname.
+LEASETIME_RE = re.compile(r"^(?:\d+[smhdw]?|infinite)$", re.IGNORECASE)
+
+# Keywords dnsmasq accepts in a dhcp-host line where a hostname could stand.
+DHCP_HOST_KEYWORDS = frozenset({"ignore"})
+
 
 @dataclass
 class LeaseEntry:
@@ -125,6 +132,11 @@ class DhcpReservations:
             if MAC_RE.fullmatch(candidate):
                 continue
 
+            # Skip a trailing lease time: "02:aa:...:14,iPhone-Three,12h" names
+            # the host iPhone-Three, not 12h.
+            if LEASETIME_RE.fullmatch(candidate) or lower in DHCP_HOST_KEYWORDS:
+                continue
+
             if (
                 lower.startswith(
                     (
@@ -167,10 +179,11 @@ class DhcpReservations:
         except ValueError:
             pass
 
-        # 2. Hostname match.
-        # This is the important part for your DHCPv6 leases:
-        #   dhcphosts: iPhone-Micha
-        #   leases:    iphone-micha
+        # 2. Hostname match. This is what links a DHCPv6 lease to its
+        # reservation, because the lease line carries an IAID and a dynamic
+        # address rather than the MAC/address from dhcp-hosts:
+        #   dhcphosts: 02:aa:00:00:00:12,iPhone-Two
+        #   leases:    1790623777 18 fd00:77::113 iPhone-Two 00:01:...
         if name and self._normalise_name(name) in self.names:
             return True
 
