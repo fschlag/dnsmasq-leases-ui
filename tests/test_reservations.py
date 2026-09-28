@@ -126,3 +126,45 @@ class TestIpv6Leases:
         entries = leases(IPV6_LEASES, IPV6_HOSTS)
         assert len(entries) == 4
         assert not any(name.startswith("duid") for name in entries)
+
+
+class TestDuidKeyedReservations:
+    """dnsmasq key DHCPv6 reservations by DUID as "id:<hex>"; the lease line
+    carry that DUID in its client-id field."""
+
+    DUID = "00:01:00:01:32:4d:7c:26:02:aa:00:00:00:12"
+
+    def test_duid_is_stored_as_an_identifier(self):
+        r = parse(f"id:{self.DUID},iPhone-Renamed")
+        assert self.DUID in r.identifiers
+        assert r.names == {"iphone-renamed"}
+
+    def test_lease_matched_by_duid_when_hostname_differs(self):
+        r = parse(f"id:{self.DUID},iPhone-Renamed")
+        # Lease reports a different hostname and a dynamic address.
+        assert r.matches(
+            identifier="18",
+            ip="fd00:77::113",
+            name="iPhone-Two",
+            client_id=self.DUID,
+        )
+
+    def test_duid_match_is_case_insensitive(self):
+        r = parse(f"id:{self.DUID.upper()},iPhone-Renamed")
+        assert r.matches(identifier="18", ip="fd00:77::113", name="x", client_id=self.DUID)
+
+    def test_wildcard_client_id_is_not_stored(self):
+        """A leases file write "*" for a lease without a client-id, so "id:*"
+        must not turn every such lease into a reservation."""
+        r = parse("id:*,172.31.77.250,any-client")
+        assert "*" not in r.identifiers
+        assert not r.matches(
+            identifier="02:aa:00:00:00:99", ip="192.168.0.1", name="other", client_id="*"
+        )
+
+    def test_ipv4_client_id_reservation(self, leases):
+        entries = leases(
+            "1790623935 02:aa:00:00:00:02 172.31.77.101 dynamic-b 01:02:aa:00:00:00:02\n",
+            "id:01:02:aa:00:00:00:02,some-other-name\n",
+        )
+        assert entries["dynamic-b"].staticIP is True

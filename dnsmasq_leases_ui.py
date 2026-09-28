@@ -166,7 +166,17 @@ class DhcpReservations:
             try:
                 ip_address(first)
             except ValueError:
-                if not first.casefold().startswith(("set:", "tag:", "id:", "net:", "bootfile=")):
+                lower = first.casefold()
+                if lower.startswith("id:"):
+                    # dnsmasq key a reservation by client-id or DUID as
+                    # "id:<hex>", and the leases file carry that same value in
+                    # its client-id field. "id:*" match any client, and the
+                    # leases file write "*" for a lease without a client-id, so
+                    # storing it would flag every such lease.
+                    client_id = first[3:].strip()
+                    if client_id and client_id != "*":
+                        self.identifiers.add(self._normalise_identifier(client_id))
+                elif not lower.startswith(("set:", "tag:", "net:", "bootfile=")):
                     self.identifiers.add(self._normalise_identifier(first))
 
     def matches(
