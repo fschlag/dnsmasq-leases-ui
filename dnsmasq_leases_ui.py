@@ -1,10 +1,10 @@
 """Web UI for dnsmasq leases file."""
 
+import os
+import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from ipaddress import ip_address
-import os
-import re
 
 from flask import Flask, jsonify, render_template
 
@@ -12,12 +12,8 @@ __version__ = os.environ.get("APP_VERSION", "dev")
 __release_date__ = os.environ.get("APP_RELEASE_DATE", "")
 REPO_URL = "https://github.com/fschlag/dnsmasq-leases-ui"
 
-DNSMASQ_LEASES_FILE = os.environ.get(
-    "DNSMASQ_LEASES_FILE", "/var/lib/misc/dnsmasq.leases"
-)
-DNSMASQ_HOSTS_FILE = os.environ.get(
-    "DNSMASQ_HOSTS_FILE", "/etc/dnsmasq.dhcphosts"
-)
+DNSMASQ_LEASES_FILE = os.environ.get("DNSMASQ_LEASES_FILE", "/var/lib/misc/dnsmasq.leases")
+DNSMASQ_HOSTS_FILE = os.environ.get("DNSMASQ_HOSTS_FILE", "/etc/dnsmasq.dhcphosts")
 
 app = Flask(__name__)
 
@@ -59,9 +55,7 @@ class LeaseEntry:
         if leasetime == "0":
             lease_end = "Never"
         else:
-            lease_end = datetime.fromtimestamp(int(leasetime)).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            lease_end = datetime.fromtimestamp(int(leasetime)).strftime("%Y-%m-%d %H:%M:%S")
 
         return cls(
             staticIP=reserved,
@@ -109,9 +103,7 @@ class DhcpReservations:
                 pass
 
             if MAC_RE.fullmatch(candidate):
-                self.identifiers.add(
-                    self._normalise_identifier(candidate)
-                )
+                self.identifiers.add(self._normalise_identifier(candidate))
 
         # In the dhcp-host syntax used by this dnsmasq setup, the hostname
         # is the last ordinary field. Hostname matching is essential for
@@ -133,17 +125,20 @@ class DhcpReservations:
             if MAC_RE.fullmatch(candidate):
                 continue
 
-            if lower.startswith(
-                (
-                    "set:",
-                    "tag:",
-                    "id:",
-                    "net:",
-                    "bootfile=",
-                    "pxe-service=",
-                    "dhcp-option=",
+            if (
+                lower.startswith(
+                    (
+                        "set:",
+                        "tag:",
+                        "id:",
+                        "net:",
+                        "bootfile=",
+                        "pxe-service=",
+                        "dhcp-option=",
+                    )
                 )
-            ) or "=" in candidate:
+                or "=" in candidate
+            ):
                 continue
 
             self.names.add(self._normalise_name(candidate))
@@ -155,12 +150,8 @@ class DhcpReservations:
             try:
                 ip_address(first)
             except ValueError:
-                if not first.casefold().startswith(
-                    ("set:", "tag:", "id:", "net:", "bootfile=")
-                ):
-                    self.identifiers.add(
-                        self._normalise_identifier(first)
-                    )
+                if not first.casefold().startswith(("set:", "tag:", "id:", "net:", "bootfile=")):
+                    self.identifiers.add(self._normalise_identifier(first))
 
     def matches(
         self,
@@ -187,10 +178,7 @@ class DhcpReservations:
         if identifier and self._normalise_identifier(identifier) in self.identifiers:
             return True
 
-        if client_id and self._normalise_identifier(client_id) in self.identifiers:
-            return True
-
-        return False
+        return bool(client_id and self._normalise_identifier(client_id) in self.identifiers)
 
 
 def read_reservations() -> DhcpReservations:
