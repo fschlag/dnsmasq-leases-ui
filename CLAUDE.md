@@ -42,7 +42,7 @@ Lint + format via `ruff` (config in `pyproject.toml`):
 .venv/bin/ruff format --check . && .venv/bin/ruff check .   # CI-style verify
 ```
 `.github/workflows/ci.yml` run three job on every PR and on `main`: `python` (ruff + pytest, 3.12), `js` (`node --test`), `docker` (build image, serve sample leases, assert `/`, `/leases`, both module and the icon answer 200).
-`ruff>=0.8` unpinned: local venv 0.15, fresh CI install 0.16 — format rule can drift between them.
+`ruff` is pinned exact (`requirements-dev.txt`) so local and CI format identically — a bump is a deliberate commit, raised weekly by Dependabot. Re-run `.venv/bin/pip install -r requirements-dev.txt` after one land.
 
 Local test without real dnsmasq: `local/dnsmasq.leases.sample` ship fixture lines (IPv4 dynamic, IPv4 static, IPv6, server `duid` line). Override via env var:
 ```
