@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<meta name="color-scheme" content="light dark">
 	<title>dnsmasq-leases-ui</title>
-	<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+	<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icon.svg') }}">
 	<script>
 		(() => {
 			try {
@@ -146,7 +146,7 @@
 		th { top: 2.5rem; }
 	</style>
 </head>
-<body>
+<body data-script-root="{{ request.script_root }}">
 <div id="toolbar">
 	<input id="search" type="search" placeholder="Filter leases…" aria-label="Filter leases" autocomplete="off">
 	<button id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
@@ -177,177 +177,6 @@
 	v{{ version }}{% if release_date %} &middot; released {{ release_date }}{% endif %}
 </footer>
 <!-- Theme-toggle SVGs derived from Feather Icons (MIT). See NOTICE. -->
-<script type="module">
-	const SCRIPT_ROOT = {{ request.script_root|tojson }};
-	const THEME_KEY = 'dnsmasq-leases-theme';
-
-	const themeBtn = document.querySelector('#theme-toggle');
-	themeBtn.addEventListener('click', () => {
-		const current = document.documentElement.getAttribute('data-theme');
-		const effective = current ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-		const next = effective === 'dark' ? 'light' : 'dark';
-		document.documentElement.setAttribute('data-theme', next);
-		try { localStorage.setItem(THEME_KEY, next); } catch {}
-	});
-
-	const STORAGE_KEY = 'dnsmasq-leases-sort';
-	const DEFAULT_SORT = { column: 'ipAddress', dir: 'asc' };
-	const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-
-	let leases = [];
-	let filterQuery = '';
-	let currentSort = loadSort();
-
-	function loadSort() {
-		try {
-			const raw = localStorage.getItem(STORAGE_KEY);
-			if (raw) {
-				const parsed = JSON.parse(raw);
-				if (parsed?.column && parsed?.dir) return parsed;
-			}
-		} catch {}
-		return { ...DEFAULT_SORT };
-	}
-
-	function saveSort(sort) {
-		try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sort)); } catch {}
-	}
-
-	function ipToTuple(ip) {
-		if (typeof ip !== 'string') return [0, 0, 0, 0];
-		if (ip.includes('.') && !ip.includes(':')) {
-			return ip.split('.').map(p => parseInt(p, 10) || 0);
-		}
-		return null;
-	}
-
-	function cmp(a, b, column) {
-		const va = a[column];
-		const vb = b[column];
-		if (column === 'ipAddress') {
-			const ta = ipToTuple(va);
-			const tb = ipToTuple(vb);
-			if (ta && tb) {
-				for (let i = 0; i < 4; i++) {
-					if (ta[i] !== tb[i]) return ta[i] - tb[i];
-				}
-				return 0;
-			}
-			return collator.compare(String(va), String(vb));
-		}
-		if (column === 'staticIP') {
-			if (va === vb) return cmp(a, b, 'ipAddress');
-			return va ? -1 : 1;
-		}
-		return collator.compare(String(va ?? ''), String(vb ?? ''));
-	}
-
-	function matchesFilter(row) {
-		if (!filterQuery) return true;
-		const q = filterQuery.toLowerCase();
-		return (
-			row.ipAddress.toLowerCase().includes(q) ||
-			row.macAddress.toLowerCase().includes(q) ||
-			(row.name || '').toLowerCase().includes(q) ||
-			(row.leasetime || '').toLowerCase().includes(q) ||
-			(row.staticIP ? 'yes' : 'no').includes(q)
-		);
-	}
-
-	function render() {
-		const filtered = leases.filter(matchesFilter);
-		const sorted = filtered.sort((a, b) => {
-			const c = cmp(a, b, currentSort.column);
-			return currentSort.dir === 'desc' ? -c : c;
-		});
-		const tbody = document.querySelector('#leases tbody');
-		updateCount(filtered.length);
-		tbody.replaceChildren(...sorted.map(row => {
-			const tr = document.createElement('tr');
-			for (const val of [
-				row.ipAddress,
-				row.macAddress,
-				row.name,
-				row.staticIP ? 'Yes' : 'No',
-				row.leasetime,
-			]) {
-				const td = document.createElement('td');
-				td.textContent = val;
-				tr.appendChild(td);
-			}
-			return tr;
-		}));
-		updateIndicators();
-	}
-
-	function updateIndicators() {
-		for (const th of document.querySelectorAll('#leases th')) {
-			const key = th.dataset.key;
-			const ind = th.querySelector('.sort-indicator');
-			if (key === currentSort.column) {
-				th.classList.add('sorted');
-				th.setAttribute('aria-sort', currentSort.dir === 'asc' ? 'ascending' : 'descending');
-				ind.textContent = currentSort.dir === 'asc' ? ' ▲' : ' ▼';
-			} else {
-				th.classList.remove('sorted');
-				th.setAttribute('aria-sort', 'none');
-				ind.textContent = '';
-			}
-		}
-	}
-
-	function activateHeader(th) {
-		const key = th.dataset.key;
-		if (currentSort.column === key) {
-			currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-		} else {
-			currentSort = { column: key, dir: 'asc' };
-		}
-		saveSort(currentSort);
-		render();
-	}
-
-	const statusEl = document.querySelector('#status');
-	function updateCount(shown) {
-		if (statusEl.classList.contains('error')) return;
-		const total = leases.length;
-		statusEl.textContent = shown === total
-			? `${total} lease${total === 1 ? '' : 's'}`
-			: `${shown} of ${total} leases`;
-	}
-
-	const searchEl = document.querySelector('#search');
-	searchEl.addEventListener('input', () => {
-		filterQuery = searchEl.value.trim();
-		render();
-	});
-
-	const thead = document.querySelector('#leases thead');
-	thead.addEventListener('click', e => {
-		const th = e.target.closest('th');
-		if (th) activateHeader(th);
-	});
-	thead.addEventListener('keydown', e => {
-		if (e.key !== 'Enter' && e.key !== ' ') return;
-		const th = e.target.closest('th');
-		if (!th) return;
-		e.preventDefault();
-		activateHeader(th);
-	});
-
-	updateIndicators();
-
-	try {
-		const r = await fetch(`${SCRIPT_ROOT}/leases`);
-		if (!r.ok) throw new Error(`HTTP ${r.status}`);
-		const data = await r.json();
-		leases = data.leases;
-		render();
-	} catch (err) {
-		statusEl.textContent = `Failed to load leases: ${err.message}`;
-		statusEl.classList.add('error');
-		console.error(err);
-	}
-</script>
+<script type="module" src="{{ url_for('static', filename='app.js') }}?v={{ version }}"></script>
 </body>
 </html>
