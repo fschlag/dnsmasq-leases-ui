@@ -168,3 +168,35 @@ class TestDuidKeyedReservations:
             "id:01:02:aa:00:00:00:02,some-other-name\n",
         )
         assert entries["dynamic-b"].staticIP is True
+
+
+class TestDegenerateInput:
+    def test_line_of_separators_only(self):
+        assert parse(",").names == set()
+
+    def test_empty_bracketed_field(self):
+        r = parse("02:aa:00:00:00:01,[]")
+        assert r.identifiers == {"02:aa:00:00:00:01"}
+        assert r.names == set()
+
+    def test_bare_client_id_first_field(self):
+        # A client-id written without the "id:" prefix is still an identifier.
+        r = parse("01:02:aa:00:00:00:02,some-name")
+        assert "01:02:aa:00:00:00:02" in r.identifiers
+
+    def test_unparseable_lease_address_falls_through(self):
+        r = parse("02:aa:00:00:00:01,172.31.77.201,reserved-a")
+        assert not r.matches(identifier="x", ip="not-an-ip", name="nope", client_id="nope")
+
+
+class TestIdentifierOnlyMatch:
+    def test_mac_match_when_address_is_not_in_dhcp_hosts(self):
+        """The MAC branch: a reservation whose host now hold a different
+        address, e.g. after the subnet is renumbered."""
+        r = parse("02:aa:00:00:00:01,172.31.77.201,reserved-a")
+        assert r.matches(
+            identifier="02:aa:00:00:00:01",
+            ip="10.0.0.5",
+            name="renamed-host",
+            client_id="*",
+        )

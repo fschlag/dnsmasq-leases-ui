@@ -41,3 +41,8 @@ def test_lease_end_is_not_overridden_for_reservations():
     js = "\n".join(path.read_text() for path in sorted(STATIC.glob("*.js")))
     assert "staticIP ? 'Never'" not in js
     assert "row.leasetime" in (STATIC / "leases.js").read_text()
+
+
+def test_footer_carries_version_and_repo(page):
+    assert "dev" in page  # APP_VERSION default
+    assert "github.com/fschlag/dnsmasq-leases-ui" in page
