@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,4 +37,53 @@ jobs:
         run: ruff check --output-format=github .
 
       - name: pytest
-        run: pytest
+        run: pytest --cov=dnsmasq_leases_ui --cov-report=term-missing
+
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # A bare directory argument is not a test target; pass the glob.
+      - name: node --test
+        run: node --test 'tests/js/*.test.mjs'
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Plain docker build on the runner uses the default driver, so the image
+      # lands in the daemon without --load.
+      - name: Build image
+        run: docker build -t dnsmasq-leases-ui:ci .
+
+      - name: Run container
+        run: |
+          docker run -d --name ci \
+            -p 5000:5000 \
+            -v "$PWD/local/dnsmasq.leases.sample:/var/lib/misc/dnsmasq.leases:ro" \
+            dnsmasq-leases-ui:ci
+
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:5000/leases && break
+            sleep 1
+          done
+          for path in / /leases /static/app.js /static/leases.js /static/icon.svg; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:5000${path}")
+            echo "${path} -> ${code}"
+            [ "$code" = "200" ] || exit 1
+          done
+          count=$(curl -s http://127.0.0.1:5000/leases | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["leases"]))')
+          echo "leases parsed: ${count}"
+          [ "$count" = "200" ] || exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs ci
