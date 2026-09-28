@@ -24,7 +24,12 @@ Local Docker test with sample leases:
 ```
 Build image, mount `local/dnsmasq.leases.sample` as leases file, run foreground (`--rm -it`).
 
-No tests. Lint + format via `ruff` (config in `pyproject.toml`):
+Tests via `pytest` (`tests/`, fixtures in `tests/samples.py` captured from a real dnsmasq 2.90):
+```
+.venv/bin/python -m pytest
+```
+
+Lint + format via `ruff` (config in `pyproject.toml`):
 ```
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/ruff check .        # lint
