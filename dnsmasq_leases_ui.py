@@ -12,7 +12,6 @@ from ipaddress import ip_address
 
 from flask import Flask, jsonify, render_template
 
-
 __version__ = os.environ.get("APP_VERSION", "dev")
 __release_date__ = os.environ.get("APP_RELEASE_DATE", "")
 REPO_URL = "https://github.com/fschlag/dnsmasq-leases-ui"
