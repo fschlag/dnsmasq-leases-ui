@@ -12,6 +12,7 @@ Tiny web UI for the [dnsmasq](https://thekelleys.org.uk/dnsmasq/doc.html) DHCP l
 ## Features
 
 - Sortable, searchable table of all active DHCP leases
+- Automatically detects HTTP/HTTPS web interfaces and makes reachable device IPs clickable
 - Sticky header, dark / light mode (follows OS, override persisted)
 - JSON API at `/leases` for scripts and monitoring
 - Static leases listed first, IPv4 sorted numerically
