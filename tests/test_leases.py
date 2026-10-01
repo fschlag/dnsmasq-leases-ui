@@ -63,7 +63,7 @@ class TestLeasesEndpoint:
         assert response.status_code == 200
         rows = json.loads(response.get_data(as_text=True))["leases"]
         assert len(rows) == 4
-        assert set(rows[0]) == {"staticIP", "leasetime", "macAddress", "ipAddress", "name"}
+        assert set(rows[0]) == {"staticIP", "leasetime", "macAddress", "ipAddress", "name", "webUrl"}
         assert {row["name"]: row["staticIP"] for row in rows} == {
             "dynamic-b": False,
             "reserved-a": True,
