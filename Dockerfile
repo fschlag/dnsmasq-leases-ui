@@ -25,6 +25,6 @@ USER nobody
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD wget -qO- http://127.0.0.1:5000/leases >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:${PORT:-5000}/leases >/dev/null || exit 1
 
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "-w", "2", "dnsmasq_leases_ui:app"]
+CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT:-5000} -w 2 dnsmasq_leases_ui:app"]
