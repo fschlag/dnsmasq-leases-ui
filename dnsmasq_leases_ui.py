@@ -89,9 +89,9 @@ class LeaseEntry:
         if leasetime == "0":
             lease_end = "Never"
         else:
-            lease_end = datetime.fromtimestamp(
-                int(leasetime)
-            ).strftime("%Y-%m-%d %H:%M:%S")
+            lease_end = datetime.fromtimestamp(int(leasetime)).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
 
         return cls(
             staticIP=reserved,
@@ -201,16 +201,12 @@ class DhcpReservations:
                     client_id = first[3:].strip()
 
                     if client_id and client_id != "*":
-                        self.identifiers.add(
-                            self._normalise_identifier(client_id)
-                        )
+                        self.identifiers.add(self._normalise_identifier(client_id))
 
                 elif not lower.startswith(
                     ("set:", "tag:", "net:", "bootfile=")
                 ):
-                    self.identifiers.add(
-                        self._normalise_identifier(first)
-                    )
+                    self.identifiers.add(self._normalise_identifier(first))
 
     def matches(
         self,
