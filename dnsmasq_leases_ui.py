@@ -247,24 +247,6 @@ def read_reservations() -> DhcpReservations:
     return reservations
 
 
-def _local_search_domains() -> list[str]:
-    """Return local DNS search/domain suffixes from resolv.conf."""
-    domains: list[str] = []
-    try:
-        with open("/etc/resolv.conf", encoding="utf-8") as f:
-            for line in f:
-                parts = line.split()
-                if not parts or parts[0] not in {"search", "domain"}:
-                    continue
-                for value in parts[1:]:
-                    value = value.strip().strip(".")
-                    if value and value not in domains:
-                        domains.append(value)
-    except OSError:
-        pass
-    return domains
-
-
 def _hostname_candidates(name: str) -> list[str]:
     """Build local hostname candidates for a lease name."""
     if not name or name == "*":
