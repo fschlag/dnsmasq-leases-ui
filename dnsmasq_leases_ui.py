@@ -285,13 +285,12 @@ def _hostname_candidates(name: str) -> list[str]:
 
     return candidates
 
-
 def _host_resolves_to_ip(hostname: str, ip: str) -> bool:
     """Return True when hostname resolves to the lease IP without blocking."""
     result: list[set[str]] = []
 
     def resolve() -> None:
-        try:
+        with suppress(OSError):
             result.append(
                 {
                     item[4][0]
@@ -303,15 +302,12 @@ def _host_resolves_to_ip(hostname: str, ip: str) -> bool:
                     )
                 }
             )
-        except OSError:
-            pass
 
     thread = threading.Thread(target=resolve, daemon=True)
     thread.start()
     thread.join(WEB_UI_TIMEOUT)
 
     return bool(result and ip in result[0])
-
 
 def check_web_hostname(ip: str, name: str, web_url: str | None) -> str | None:
     """Return a local hostname URL when it resolves to a web-enabled lease IP."""
